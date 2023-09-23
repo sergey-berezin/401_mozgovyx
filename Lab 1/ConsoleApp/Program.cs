@@ -31,10 +31,9 @@ namespace ConsoleApp
                         var result = await YoloService.ProcessImage(image);
 
                         // Saving image to `bounding_boxes` folder
-                        var cwd = Path.GetDirectoryName(arg);
                         var filename = Path.GetFileName(arg);
-                        Directory.CreateDirectory($"{cwd}/bounding_boxes");
-                        var path = $"{cwd}/bounding_boxes/{filename}";
+                        Directory.CreateDirectory("bounding_boxes");
+                        var path = $"bounding_boxes/{filename}";
                         await result.Image.SaveAsJpegAsync(path);
 
                         // Getting all `.csv` lines
