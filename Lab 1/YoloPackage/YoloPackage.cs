@@ -178,13 +178,10 @@ namespace YoloPackage
             }
         }
 
-        public static async Task<YoloSegmentation> ProcessImage(string path)
+        public static async Task<YoloSegmentation> ProcessImage(Image<Rgb24> image)
         {
             CheckCancellation(nameof(SetUpModel));
             await SetUpModel();
-
-            CheckCancellation("LoadImage");
-            using var image = Image.Load<Rgb24>(path);
 
             CheckCancellation("ResizeImage");
             var resized = image.Clone(x =>
@@ -226,7 +223,7 @@ namespace YoloPackage
             
             CheckCancellation(nameof(RemoveDuplicateBoxes));
             RemoveDuplicateBoxes(objects);
-
+            
             CheckCancellation(nameof(Annotate));
             Annotate(resized, objects);
 
