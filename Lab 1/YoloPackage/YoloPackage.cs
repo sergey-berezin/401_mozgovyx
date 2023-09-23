@@ -227,7 +227,7 @@ namespace YoloPackage
             CheckCancellation(nameof(Annotate));
             Annotate(resized, objects);
 
-            return new YoloSegmentation(resized, new List<ObjectBox>());
+            return new YoloSegmentation(resized, objects);
         }
     }
 
