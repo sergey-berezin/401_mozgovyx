@@ -84,6 +84,10 @@ namespace YoloPackage
         private static async Task<Tensor<float>> Forward(List<NamedOnnxValue> inputs)
         {
             await SessionLock.WaitAsync();
+            if (Session == null)
+            {
+                throw new Exception("Current session is null");
+            }
             var outputs = Session.Run(inputs);
             SessionLock.Release();
             return outputs.First().AsTensor<float>();
