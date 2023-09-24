@@ -181,7 +181,7 @@ namespace YoloPackage
         public static async Task<YoloSegmentation> ProcessImage(Image<Rgb24> image)
         {
             CheckCancellation(nameof(SetUpModel));
-            await SetUpModel();
+            var setupTask = Task.Run(SetUpModel);
 
             CheckCancellation("ResizeImage");
             var resized = image.Clone(x =>
@@ -214,6 +214,10 @@ namespace YoloPackage
             {
                NamedOnnxValue.CreateFromTensor("image", input)
             };
+
+            // Can't perform calculations, until the session's been initialized
+            // Could be a bottleneck
+            await setupTask;
 
             CheckCancellation(nameof(Forward));
             var outputs = await Forward(inputs);
