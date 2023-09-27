@@ -35,62 +35,54 @@ namespace YoloPackage
         private static InferenceSession? Session = null;
         private static SemaphoreSlim SessionLock = new SemaphoreSlim(1, 1);
         public static ILogger? Logger = null;
-        public static CancellationTokenSource cts = new CancellationTokenSource();
 
-        private static void CheckCancellation(string? taskName = null)
-        {
-            if (cts.IsCancellationRequested)
-            {
-                if (taskName != null)
-                    throw new TaskCanceledException($"{taskName} is requested to be cancelled");
-                else
-                    throw new TaskCanceledException();
-            }
-        }
-
-        private static async Task DownloadModel()
+        private static async Task DownloadModel(CancellationToken token)
         {
             Logger?.SendMessage($"Downloading YOLO model from {ModelURL}");
             using var client = new HttpClient();
-            using var data = await client.GetStreamAsync(ModelURL);
+            using var data = await client.GetStreamAsync(ModelURL, token);
             using var fileStream = new FileStream(ModelFilename, FileMode.OpenOrCreate);
-            await data.CopyToAsync(fileStream);
+            await data.CopyToAsync(fileStream, token);
             Logger?.SendMessage("Model has been downloaded");
         }
 
-        private static async Task SetUpModel()
+        private static async Task SetUpModel(CancellationToken token)
         {
-            await SessionLock.WaitAsync();
-            while (!cts.IsCancellationRequested && Session == null)
+            SessionLock.Wait();
+            while (Session == null)
             {
+                // Retry method here
+                await DownloadModel(token);
                 try
                 {
-                    Logger?.SendMessage("Starting new session");
                     Session = new InferenceSession(ModelFilename, new SessionOptions
                     {
-                        // Too many warnings per millisecond
-                        LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR
+                        LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR    
                     });
-                    Logger?.SendMessage("Session has been started");
                 }
                 catch (Exception)
                 {
-                    await DownloadModel();
+                    Logger?.SendMessage("Failed to create session with current model");
+                }
+                finally
+                {
+                    if (Session != null)
+                        Logger?.SendMessage("Session has been started");
                 }
             }
             SessionLock.Release();
         }
 
-        private static async Task<Tensor<float>> Forward(List<NamedOnnxValue> inputs)
+        private static Tensor<float> Forward(List<NamedOnnxValue> inputs)
         {
-            await SessionLock.WaitAsync();
+            SessionLock.Wait();
             if (Session == null)
             {
                 throw new Exception("Current session is null");
             }
             var outputs = Session.Run(inputs);
             SessionLock.Release();
-            return outputs.First().AsTensor<float>();
+            return outputs[0].AsTensor<float>();
         }
 
         private static List<ObjectBox> GetObjectBoxes(Tensor<float> outputs)
@@ -178,13 +170,9 @@ namespace YoloPackage
             }
         }
 
-        public static async Task<YoloSegmentation> ProcessImage(Image<Rgb24> image)
+        private static Image<Rgb24> Preprocessing(Image<Rgb24> image)
         {
-            CheckCancellation(nameof(SetUpModel));
-            var setupTask = Task.Run(SetUpModel);
-
-            CheckCancellation("ResizeImage");
-            var resized = image.Clone(x =>
+            return image.Clone(x =>
             {
                 x.Resize(new ResizeOptions
                 {
@@ -192,10 +180,12 @@ namespace YoloPackage
                     Mode = ResizeMode.Pad
                 });
             });
+        }
 
-            CheckCancellation("ImageToTensor");
+        private static List<NamedOnnxValue> CreateInputs(Image<Rgb24> image)
+        {
             var input = new DenseTensor<float>(new[] { 1, 3, TargetSize, TargetSize });
-            resized.ProcessPixelRows(pa =>
+            image.ProcessPixelRows(pa =>
             {
                 for (int y = 0; y < TargetSize; y++)
                 {
@@ -208,30 +198,29 @@ namespace YoloPackage
                     }
                 }
             });
-
-            CheckCancellation("TensorToInputs");
-            var inputs = new List<NamedOnnxValue>
+            return new List<NamedOnnxValue>
             {
                NamedOnnxValue.CreateFromTensor("image", input)
             };
+        }
 
-            // Can't perform calculations, until the session's been initialized
-            // Could be a bottleneck
-            await setupTask;
-
-            CheckCancellation(nameof(Forward));
-            var outputs = await Forward(inputs);
-
-            CheckCancellation(nameof(GetObjectBoxes));
-            var objects = GetObjectBoxes(outputs);
-            
-            CheckCancellation(nameof(RemoveDuplicateBoxes));
-            RemoveDuplicateBoxes(objects);
-            
-            CheckCancellation(nameof(Annotate));
-            Annotate(resized, objects);
-
-            return new YoloSegmentation(resized, objects);
+        public static async Task<YoloSegmentation> ProcessImage(Image<Rgb24> image, CancellationToken token)
+        {
+            var setupTask = Task.Run(() => SetUpModel(token), token);
+            var preprocessingTask = Task.Run(() => Preprocessing(image), token);
+            var createInputsTask = preprocessingTask.ContinueWith(x => CreateInputs(x.Result), token);
+            var forwardTask = Task.WhenAll(new Task[] { setupTask, createInputsTask }).ContinueWith(
+                x => Forward(createInputsTask.Result), token
+            );
+            var getBoxesTask = forwardTask.ContinueWith(x => GetObjectBoxes(x.Result), token);
+            var removeDuplicateTask = getBoxesTask.ContinueWith(
+                x => RemoveDuplicateBoxes(x.Result), token
+            );
+            var annotateTask = removeDuplicateTask.ContinueWith(
+                x => Annotate(preprocessingTask.Result, getBoxesTask.Result), token
+            );
+            await annotateTask;
+            return new YoloSegmentation(preprocessingTask.Result, getBoxesTask.Result);
         }
     }
 

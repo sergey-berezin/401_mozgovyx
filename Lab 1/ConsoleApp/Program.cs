@@ -10,6 +10,8 @@ namespace ConsoleApp
 {
     public class Program
     {
+        private static CancellationTokenSource cts = new CancellationTokenSource();
+        
         public static async Task Main(string[] args)
         {
             if (args.Length == 0)
@@ -20,50 +22,59 @@ namespace ConsoleApp
 
             List<CSVLine> objects = new();
             SemaphoreSlim objectsLock = new SemaphoreSlim(1, 1);
-            
             YoloService.Logger = new ConsoleLogger();
+
             var argsProcessingTask = Task.WhenAll(args.Select(arg => {
                 return Task.Run(async () => {
                     try
                     {
                         var image = Image.Load<Rgb24>(arg);
-                        // Getting component results
-                        var result = await YoloService.ProcessImage(image);
+                        var processingTask = YoloService.ProcessImage(image, cts.Token);
 
-                        // Saving image to `bounding_boxes` folder
                         var filename = Path.GetFileName(arg);
                         Directory.CreateDirectory("bounding_boxes");
                         var path = $"bounding_boxes/{filename}";
-                        await result.Image.SaveAsJpegAsync(path);
 
-                        // Getting all `.csv` lines
-                        await objectsLock.WaitAsync();
-                        objects.AddRange(result.BoundingBoxes.Select(
+                        await processingTask;
+                        image = processingTask.Result.Image;
+                        var boundingBoxes = processingTask.Result.BoundingBoxes;
+                        var savingJpegTask = image.SaveAsJpegAsync(path.ToLower(), cts.Token);
+
+                        objectsLock.Wait();
+                        objects.AddRange(boundingBoxes.Select(
                             bb => new CSVLine(
                                 arg,
                                 YoloService.Labels[bb.Class],
-                                Convert.ToInt32(bb.XMin),
-                                Convert.ToInt32(bb.YMin),
-                                Convert.ToInt32(bb.XMax - bb.XMin),
-                                Convert.ToInt32(bb.YMax - bb.YMin)
+                                (int) bb.XMin,
+                                (int) bb.YMin,
+                                (int) (bb.XMax - bb.XMin),
+                                (int) (bb.YMax - bb.YMin)
                             )
                         ));
                         objectsLock.Release();
+                        await savingJpegTask;
                     }
                     catch (Exception e)
                     {
                         Console.WriteLine($"`{arg}`: {e.Message}");
                     }
-                });
+                }, cts.Token);
             }));
-            
-            /*
-            // Some tasks can complete their calculations, if `model.onnx` is already downloaded
-            Thread.Sleep(1000);
-            YoloService.cts.Cancel();
-            */
-            await argsProcessingTask;
 
+            // Some tasks can complete their calculations, if `model.onnx` is already downloaded
+            /*
+            Thread.Sleep(1000);
+            cts.Cancel();
+            */
+            
+            try
+            {
+                await argsProcessingTask;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
             SaveCVS(objects);
         }
         
