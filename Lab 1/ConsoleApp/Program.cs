@@ -61,11 +61,9 @@ namespace ConsoleApp
                 }, cts.Token);
             }));
 
-            // Some tasks can complete their calculations, if `model.onnx` is already downloaded
-            /*
-            Thread.Sleep(1000);
-            cts.Cancel();
-            */
+            Console.CancelKeyPress += delegate {
+                cts.Cancel();
+            };
             
             try
             {
