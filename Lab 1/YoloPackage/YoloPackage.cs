@@ -49,16 +49,17 @@ namespace YoloPackage
         private static async Task SetUpModel(CancellationToken token)
         {
             SessionLock.Wait();
+            bool isDownloaded = false;
             while (Session == null)
             {
                 // Retry method here
-                await DownloadModel(token);
                 try
                 {
                     Session = new InferenceSession(ModelFilename, new SessionOptions
                     {
                         LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR    
                     });
+                    isDownloaded = Session != null;
                 }
                 catch (Exception)
                 {
@@ -66,9 +67,11 @@ namespace YoloPackage
                 }
                 finally
                 {
-                    if (Session != null)
+                    if (isDownloaded)
                         Logger?.SendMessage("Session has been started");
                 }
+                if (!isDownloaded)
+                    await DownloadModel(token);
             }
             SessionLock.Release();
         }
