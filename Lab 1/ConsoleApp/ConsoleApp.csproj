@@ -6,6 +6,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Mozgovyx.YoloPackage" Version="2.1.2709.1" />
+    <PackageReference Include="Mozgovyx.YoloPackage" Version="2.1.2909.1" />
   </ItemGroup>
 </Project>
