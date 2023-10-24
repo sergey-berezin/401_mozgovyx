@@ -52,8 +52,7 @@ namespace ViewModel
         {
             BBox = segmentedObject.bbox;
             OriginalImage = segmentedObject.OriginalImage;
-            var mainImage = ImageToBitmapSource(ProcessingTools.Annotate(OriginalImage, BBox));
-            SelectedImageRef = new WeakReference(mainImage);
+            SelectedImageRef = new WeakReference(null);
             Image = ImageToBitmapSource(segmentedObject.BoundingBox);
             Class = segmentedObject.Class;
             Confidence = segmentedObject.Confidence;
