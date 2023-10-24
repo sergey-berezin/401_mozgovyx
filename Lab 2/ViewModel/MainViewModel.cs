@@ -24,9 +24,13 @@ namespace ViewModel
 
     public class DetectedImageView
     {
+        #region FIELDS
         private ObjectBox BBox { get; set; }
         private Image<Rgb24> OriginalImage { get; }
         private WeakReference SelectedImageRef { get; set; }
+        #endregion
+
+        #region PUBLIC_PROPERTIES
         public BitmapSource SelectedImage
         {
             get
@@ -47,6 +51,7 @@ namespace ViewModel
         public BitmapSource Image { get; }
         public string Class { get; set; }
         public double Confidence { get; set; }
+        #endregion
 
         public DetectedImageView(SegmentedObject segmentedObject)
         {
