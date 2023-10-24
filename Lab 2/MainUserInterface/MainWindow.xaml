@@ -17,7 +17,7 @@
 
         <DataTemplate x:Key="segmented_image_key">
             <DockPanel>
-                <Image Source="{Binding Image}" MaxHeight="100" MaxWidth="100"/>
+                <Image Source="{Binding Path=Image, Mode=OneWay}" MaxHeight="100" MaxWidth="100"/>
                 <DockPanel VerticalAlignment="Center">
                     <TextBlock Text="{Binding Class}" HorizontalAlignment="Center" TextAlignment="Center"/>
                     <TextBlock Text="    " HorizontalAlignment="Right" TextAlignment="Right"/>
