@@ -1,5 +1,4 @@
 using System;
-using System.Windows.Documents;
 using System.Collections.Generic;
 using System.Windows.Input;
 using ImageProcessingLib;
@@ -27,11 +26,22 @@ namespace ViewModel
     {
         private ObjectBox BBox { get; set; }
         private Image<Rgb24> OriginalImage { get; }
+        private WeakReference SelectedImageRef { get; set; }
         public BitmapSource SelectedImage
         {
             get
             {
-                return ImageToBitmapSource(ProcessingTools.Annotate(OriginalImage, BBox));
+                var selectedImage = SelectedImageRef.Target;
+                if (selectedImage == null)
+                {
+                    var mainImage = ImageToBitmapSource(ProcessingTools.Annotate(OriginalImage, BBox));
+                    SelectedImageRef = new WeakReference(mainImage);
+                    return mainImage;
+                }
+                else
+                {
+                    return (BitmapSource)selectedImage;
+                }
             }
         }
         public BitmapSource Image { get; }
@@ -42,6 +52,8 @@ namespace ViewModel
         {
             BBox = segmentedObject.bbox;
             OriginalImage = segmentedObject.OriginalImage;
+            var mainImage = ImageToBitmapSource(ProcessingTools.Annotate(OriginalImage, BBox));
+            SelectedImageRef = new WeakReference(mainImage);
             Image = ImageToBitmapSource(segmentedObject.BoundingBox);
             Class = segmentedObject.Class;
             Confidence = segmentedObject.Confidence;
