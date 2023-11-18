@@ -15,9 +15,11 @@ namespace ImageProcessingLib
         public List<string> Classes { get; private set; }
         public List<double> Confidences { get; private set; }
         public List<ObjectBox> ObjectBoxes { get; private set; }
+        public string Filename { get; private set; }
 
-        public ImagePresentation(IEnumerable<SegmentedObject> segmentation)
+        public ImagePresentation(IEnumerable<SegmentedObject> segmentation, string filename)
         {
+            Filename = filename;
             if (segmentation == null || segmentation.Count() == 0)
             {
                 Pixels = string.Empty;
@@ -39,6 +41,7 @@ namespace ImageProcessingLib
                 Confidences = segmentation.Select(x => x.Confidence).ToList();
                 ObjectBoxes = segmentation.Select(x => x.bbox).ToList();
             }
+            Filename = filename;
         }
 
         public List<SegmentedObject> ToSegmentedObjectList()
