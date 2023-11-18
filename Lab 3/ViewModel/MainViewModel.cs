@@ -98,6 +98,8 @@ namespace ViewModel
 
         private readonly IUIServices uiServices;
 
+        private JsonStorage Storage;
+
         #region COMMANDS
         private void OnSelectFolder(object arg)
         {
@@ -107,7 +109,6 @@ namespace ViewModel
         }
         public async Task OnRunModel(object arg)
         {
-            DetectedImages.Clear();
             RaisePropertyChanged(nameof(DetectedImages));
             try
             {
@@ -120,6 +121,9 @@ namespace ViewModel
                     uiServices.ReportError("This folder doesn't contain .jpg files");
                     return;
                 }
+                foreach (var image in Storage.Images)
+                    fileNames.RemoveAll(x => x == image.Filename);
+
                 var tasks = fileNames.Select(arg => 
                     Task.Run(() => ProcessingTools.FindImageSegmentation(arg, cts.Token))
                 ).ToList();
@@ -128,7 +132,13 @@ namespace ViewModel
                 {
                     var task = await Task.WhenAny(tasks);
                     var detectedObjects = task.Result.ToList();
+                    
+                    int taskIndex = tasks.IndexOf(task);
+                    string filename = fileNames[taskIndex];
                     tasks.Remove(task);
+                    fileNames.RemoveAt(taskIndex);
+
+                    Storage.AddImage(new ImagePresentation(detectedObjects, filename));
                     DetectedImages = DetectedImages.Concat(
                         detectedObjects.Select(x => new DetectedImageView(x))
                     ).ToList();
@@ -155,6 +165,8 @@ namespace ViewModel
 
         public MainViewModel(IUIServices uiServices)
         {
+            Storage = new JsonStorage();
+            Storage.Load();
             SelectedFolder = string.Empty;
             DetectedImages = new List<DetectedImageView>();
 
