@@ -115,7 +115,7 @@ namespace ImageProcessingLib
             bool imageExists = false;
             foreach (var existing in Images)
             {
-                if (image.Pixels == existing.Pixels)
+                if (image.Pixels == existing.Pixels || image.Filename == existing.Filename)
                 {
                     imageExists = true;
                     break;
