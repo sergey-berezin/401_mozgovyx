@@ -40,5 +40,25 @@ namespace ImageProcessingLib
                 ObjectBoxes = segmentation.Select(x => x.bbox).ToList();
             }
         }
+
+        public List<SegmentedObject> ToSegmentedObjectList()
+        {
+            List<SegmentedObject> segmented = new List<SegmentedObject>();
+            byte[] bytePixels = Convert.FromBase64String(Pixels);
+            Image<Rgb24> image = Image.LoadPixelData<Rgb24>(bytePixels, Width, Height);
+            for (int i = 0; i < Classes.Count(); i++)
+            {
+                segmented.Add(
+                    new SegmentedObject(
+                        image,
+                        Classes[i],
+                        Confidences[i],
+                        ProcessingTools.CutBoundingBox(image, ObjectBoxes[i]),
+                        ObjectBoxes[i]
+                    )
+                );
+            }
+            return segmented;
+        }
     }
 }

@@ -41,7 +41,7 @@ namespace ImageProcessingLib
            );
         }
 
-        private static Image<Rgb24> CutBoundingBox(Image<Rgb24> original, ObjectBox bbox)
+        public static Image<Rgb24> CutBoundingBox(Image<Rgb24> original, ObjectBox bbox)
         {
             int x = (int)bbox.XMin, y = (int)bbox.YMin;
             int width = (int)(bbox.XMax - bbox.XMin), height = (int)(bbox.YMax - bbox.YMin);
