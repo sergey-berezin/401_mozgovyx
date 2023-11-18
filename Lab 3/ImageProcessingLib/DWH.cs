@@ -61,4 +61,65 @@ namespace ImageProcessingLib
             return segmented;
         }
     }
+
+    public class JsonStorage
+    {
+        public string Path { get; private set; }
+        public List<ImagePresentation> Images { get; private set; }
+
+        public JsonStorage(string path = "storage.json")
+        {
+            Path = path;
+            Images = new List<ImagePresentation>();
+        }
+
+        public void Erase()
+        {
+            Images.Clear();
+            if (File.Exists(Path))
+                File.Delete(Path);
+        }
+
+        public void Load()
+        {
+            if (!File.Exists(Path))
+                return;
+            var images = JsonConvert.DeserializeObject<List<ImagePresentation>>(File.ReadAllText(Path));
+            if (images != null)
+                Images = images;
+            else
+                Images = new List<ImagePresentation>();
+        }
+
+        public void Save()
+        {
+            string tmpPath = Path + ".tmp";
+            string serialized = JsonConvert.SerializeObject(Images);
+            using (StreamWriter writer = new StreamWriter(tmpPath))
+            {
+                writer.WriteLine(serialized);
+            }
+            if (File.Exists(tmpPath))
+            {
+                File.Copy(tmpPath, Path);
+                if (File.Exists(Path))
+                    File.Delete(tmpPath);
+            }
+        }
+
+        public void AddImage(ImagePresentation image)
+        {
+            bool imageExists = false;
+            foreach (var existing in Images)
+            {
+                if (image.Pixels == existing.Pixels)
+                {
+                    imageExists = true;
+                    break;
+                }
+            }
+            if (!imageExists)
+                Images.Add(image);
+        }
+    }
 }
