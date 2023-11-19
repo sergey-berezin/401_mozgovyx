@@ -42,6 +42,7 @@
                 <Button Height="20" Content="Start calculations" Command="{Binding RunModelCommand}"/>
                 <Button Height="20" Content="Cancel calculations" Command="{Binding RequestCancellationCommand}"/>
                 <Button Height="20" Content="Select folder" Command="{Binding SelectFolderCommand}"/>
+                <Button Height="20" Content="Erase storage" Command="{Binding EraseStorageCommand}"/>
                 <TextBlock Text="Your selected folder:" TextAlignment="Center"/>
                 <TextBlock Text="{Binding SelectedFolder}" TextWrapping="Wrap" Background="#FFFBFBFB"/>
             </StackPanel>

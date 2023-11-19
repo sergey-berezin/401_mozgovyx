@@ -9,13 +9,13 @@ namespace ImageProcessingLib
 {
     public class ImagePresentation
     {
-        public string Pixels { get; private set; }
-        public int Height { get; private set; }
-        public int Width { get; private set; }
-        public List<string> Classes { get; private set; }
-        public List<double> Confidences { get; private set; }
-        public List<ObjectBox> ObjectBoxes { get; private set; }
-        public string Filename { get; private set; }
+        public string Pixels { get; set; }
+        public int Height { get; set; }
+        public int Width { get; set; }
+        public List<string> Classes { get; set; }
+        public List<double> Confidences { get; set; }
+        public List<ObjectBox> ObjectBoxes { get; set; }
+        public string Filename { get; set; }
 
         public ImagePresentation(IEnumerable<SegmentedObject> segmentation, string filename)
         {
@@ -37,6 +37,10 @@ namespace ImageProcessingLib
                 Pixels = Convert.ToBase64String(bytePixels);
                 Height = image.Height;
                 Width = image.Width;
+                if (Height == 0 || Width == 0)
+                {
+                    throw new Exception($"Height: {Height}, Width: {Width}");
+                }
                 Classes = segmentation.Select(x => x.Class).ToList();
                 Confidences = segmentation.Select(x => x.Confidence).ToList();
                 ObjectBoxes = segmentation.Select(x => x.bbox).ToList();
@@ -97,13 +101,14 @@ namespace ImageProcessingLib
         public void Save()
         {
             string tmpPath = Path + ".tmp";
-            string serialized = JsonConvert.SerializeObject(Images);
+            string serialized = JsonConvert.SerializeObject(Images, Formatting.Indented);
             using (StreamWriter writer = new StreamWriter(tmpPath))
             {
                 writer.WriteLine(serialized);
             }
             if (File.Exists(tmpPath))
             {
+                File.Delete(Path);
                 File.Copy(tmpPath, Path);
                 if (File.Exists(Path))
                     File.Delete(tmpPath);
@@ -121,7 +126,7 @@ namespace ImageProcessingLib
                     break;
                 }
             }
-            if (!imageExists)
+            if (!imageExists && image.Height > 0 && image.Width > 0)
                 Images.Add(image);
         }
     }

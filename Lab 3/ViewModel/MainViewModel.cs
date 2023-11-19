@@ -107,6 +107,17 @@ namespace ViewModel
             if (folderName == null) { return; }
             SelectedFolder = folderName;
         }
+
+        private void AddDetectedImageView(IEnumerable<SegmentedObject> detectedObjects)
+        {
+            isModelActive = true;
+            DetectedImages = DetectedImages.Concat(
+                detectedObjects.Select(x => new DetectedImageView(x))
+            ).ToList();
+            RaisePropertyChanged(nameof(DetectedImages));
+            isModelActive = false;
+        }
+
         public async Task OnRunModel(object arg)
         {
             RaisePropertyChanged(nameof(DetectedImages));
@@ -121,13 +132,27 @@ namespace ViewModel
                     uiServices.ReportError("This folder doesn't contain .jpg files");
                     return;
                 }
-                foreach (var image in Storage.Images)
-                    fileNames.RemoveAll(x => x == image.Filename);
+                List<string> processedFileNames = new List<string>();
+                foreach (var filename in fileNames)
+                {
+                    bool exists = false;
+                    foreach (var image in Storage.Images)
+                        if (image.Filename == filename)
+                            exists = true;
+                    if (!exists)
+                        processedFileNames.Add(filename);
+                }
+                if (processedFileNames.Count == 0)
+                {
+                    uiServices.ReportError("All files have already been processed");
+                    return;
+                }
+                fileNames = processedFileNames;
 
                 var tasks = fileNames.Select(arg => 
                     Task.Run(() => ProcessingTools.FindImageSegmentation(arg, cts.Token))
                 ).ToList();
-                
+                int previousLength = Storage.Images.Count;
                 while (tasks.Any())
                 {
                     var task = await Task.WhenAny(tasks);
@@ -137,13 +162,12 @@ namespace ViewModel
                     string filename = fileNames[taskIndex];
                     tasks.Remove(task);
                     fileNames.RemoveAt(taskIndex);
-
+                    var newImage = new ImagePresentation(detectedObjects, filename);
                     Storage.AddImage(new ImagePresentation(detectedObjects, filename));
-                    DetectedImages = DetectedImages.Concat(
-                        detectedObjects.Select(x => new DetectedImageView(x))
-                    ).ToList();
-                    RaisePropertyChanged(nameof(DetectedImages));
+                    AddDetectedImageView(detectedObjects);
                 }
+                if (Storage.Images.Count > previousLength)
+                    Storage.Save();
             }
             catch (Exception e)
             {
@@ -158,23 +182,34 @@ namespace ViewModel
         {
             cts.Cancel();
         }
+        public void OnEraseStorage(object arg)
+        {
+            Storage.Erase();
+            DetectedImages.Clear();
+            DetectedImages = new List<DetectedImageView>();
+            RaisePropertyChanged(nameof(DetectedImages));
+        }
         public ICommand SelectFolderCommand { get; private set; }
         public ICommand RunModelCommand { get; private set; }
         public ICommand RequestCancellationCommand { get; private set; }
+        public ICommand EraseStorageCommand { get; private set; }
         #endregion
 
         public MainViewModel(IUIServices uiServices)
         {
-            Storage = new JsonStorage();
-            Storage.Load();
             SelectedFolder = string.Empty;
             DetectedImages = new List<DetectedImageView>();
-
             this.uiServices = uiServices;
-            
+
+            Storage = new JsonStorage();
+            Storage.Load();
+            foreach (var image in Storage.Images)
+                AddDetectedImageView(image.ToSegmentedObjectList());
+
             SelectFolderCommand = new RelayCommand(OnSelectFolder, x => !isModelActive);
             RunModelCommand = new AsyncRelayCommand(OnRunModel, x => SelectedFolder != string.Empty && !isModelActive);
             RequestCancellationCommand = new RelayCommand(OnRequestCancellation, x => isModelActive);
+            EraseStorageCommand = new RelayCommand(OnEraseStorage, x => !isModelActive);
         }
     }
 }
