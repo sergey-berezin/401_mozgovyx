@@ -132,7 +132,7 @@ namespace ViewModel
                     uiServices.ReportError("This folder doesn't contain .jpg files");
                     return;
                 }
-                fileNames = fileNames.Where(x => !Storage.Images.Exists(y => y.Filename == x)).ToList();
+                fileNames = fileNames.Where(x => !Storage.Images.Any(y => y.Filename == x)).ToList();
                 if (fileNames.Count == 0)
                 {
                     uiServices.ReportError("All files have already been processed");

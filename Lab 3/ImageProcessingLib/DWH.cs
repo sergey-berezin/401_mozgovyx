@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
 using YoloPackage;
 
@@ -72,12 +73,12 @@ namespace ImageProcessingLib
     public class JsonStorage
     {
         public string Path { get; private set; }
-        public List<ImagePresentation> Images { get; private set; }
+        public ObservableCollection<ImagePresentation> Images { get; private set; }
 
         public JsonStorage(string path = "storage.json")
         {
             Path = path;
-            Images = new List<ImagePresentation>();
+            Images = new ObservableCollection<ImagePresentation>();
         }
 
         public void Erase()
@@ -91,11 +92,11 @@ namespace ImageProcessingLib
         {
             if (!File.Exists(Path))
                 return;
-            var images = JsonConvert.DeserializeObject<List<ImagePresentation>>(File.ReadAllText(Path));
+            var images = JsonConvert.DeserializeObject<ObservableCollection<ImagePresentation>>(File.ReadAllText(Path));
             if (images != null)
                 Images = images;
             else
-                Images = new List<ImagePresentation>();
+                Images = new ObservableCollection<ImagePresentation>();
         }
 
         public void Save()
