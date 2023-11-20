@@ -132,22 +132,12 @@ namespace ViewModel
                     uiServices.ReportError("This folder doesn't contain .jpg files");
                     return;
                 }
-                List<string> processedFileNames = new List<string>();
-                foreach (var filename in fileNames)
-                {
-                    bool exists = false;
-                    foreach (var image in Storage.Images)
-                        if (image.Filename == filename)
-                            exists = true;
-                    if (!exists)
-                        processedFileNames.Add(filename);
-                }
-                if (processedFileNames.Count == 0)
+                fileNames = fileNames.Where(x => !Storage.Images.Exists(y => y.Filename == x)).ToList();
+                if (fileNames.Count == 0)
                 {
                     uiServices.ReportError("All files have already been processed");
                     return;
                 }
-                fileNames = processedFileNames;
 
                 var tasks = fileNames.Select(arg => 
                     Task.Run(() => ProcessingTools.FindImageSegmentation(arg, cts.Token))
