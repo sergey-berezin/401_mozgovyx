@@ -73,12 +73,17 @@ namespace ImageProcessingLib
     public class JsonStorage
     {
         public string Path { get; private set; }
-        public ObservableCollection<ImagePresentation> Images { get; private set; }
+        private List<ImagePresentation> Images;
+
+        public int Count
+        {
+            get => Images.Count;
+        }
 
         public JsonStorage(string path = "storage.json")
         {
             Path = path;
-            Images = new ObservableCollection<ImagePresentation>();
+            Images = new List<ImagePresentation>();
         }
 
         public void Erase()
@@ -92,11 +97,11 @@ namespace ImageProcessingLib
         {
             if (!File.Exists(Path))
                 return;
-            var images = JsonConvert.DeserializeObject<ObservableCollection<ImagePresentation>>(File.ReadAllText(Path));
+            var images = JsonConvert.DeserializeObject<List<ImagePresentation>>(File.ReadAllText(Path));
             if (images != null)
                 Images = images;
             else
-                Images = new ObservableCollection<ImagePresentation>();
+                Images = new List<ImagePresentation>();
         }
 
         public void Save()
@@ -129,6 +134,11 @@ namespace ImageProcessingLib
             }
             if (!imageExists && image.Height > 0 && image.Width > 0)
                 Images.Add(image);
+        }
+
+        public IEnumerable<ImagePresentation> GetImagePresentations()
+        {
+            return Images.Select(x => x);
         }
     }
 }

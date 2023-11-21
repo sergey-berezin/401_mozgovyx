@@ -132,17 +132,18 @@ namespace ViewModel
                     uiServices.ReportError("This folder doesn't contain .jpg files");
                     return;
                 }
-                fileNames = fileNames.Where(x => !Storage.Images.Any(y => y.Filename == x)).ToList();
+                IEnumerable<ImagePresentation> images = Storage.GetImagePresentations();
+                fileNames = fileNames.Where(x => !images.Any(y => y.Filename == x)).ToList();
                 if (fileNames.Count == 0)
                 {
                     uiServices.ReportError("All files have already been processed");
                     return;
                 }
-
+                
                 var tasks = fileNames.Select(arg => 
                     Task.Run(() => ProcessingTools.FindImageSegmentation(arg, cts.Token))
                 ).ToList();
-                int previousLength = Storage.Images.Count;
+                int previousLength = Storage.Count;
                 while (tasks.Any())
                 {
                     var task = await Task.WhenAny(tasks);
@@ -156,7 +157,7 @@ namespace ViewModel
                     Storage.AddImage(new ImagePresentation(detectedObjects, filename));
                     AddDetectedImageView(detectedObjects);
                 }
-                if (Storage.Images.Count > previousLength)
+                if (Storage.Count > previousLength)
                     Storage.Save();
             }
             catch (Exception e)
@@ -193,7 +194,7 @@ namespace ViewModel
 
             Storage = new JsonStorage();
             Storage.Load();
-            foreach (var image in Storage.Images)
+            foreach (var image in Storage.GetImagePresentations())
                 AddDetectedImageView(image.ToSegmentedObjectList());
 
             SelectFolderCommand = new RelayCommand(OnSelectFolder, x => !isModelActive);
