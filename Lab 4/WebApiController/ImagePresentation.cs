@@ -1,4 +1,5 @@
 ﻿using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.PixelFormats;
 using System.Runtime.CompilerServices;
 
@@ -12,8 +13,11 @@ namespace WebApiController
 
         public ImagePresentation(Image<Rgb24> image, string className, double confidence)
         {
-            Image = new byte[image.Width * image.Height * Unsafe.SizeOf<Rgb24>()];
-            image.CopyPixelDataTo(Image);
+            using (MemoryStream ms = new MemoryStream())
+            {
+                image.Save(ms, JpegFormat.Instance);
+                Image = ms.ToArray();
+            }
             ClassName = className;
             Confidence = confidence;
         }
