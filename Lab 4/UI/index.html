@@ -1,0 +1,14 @@
+<!doctype html>
+<head>
+    <title>Image segmentation</title>
+</head>
+<body>
+    <div float="left" style="float: left; width: 50%">
+        <input type="file" accept="image/jpeg" id="image_selector">
+        <p>Original image:</p>
+        <canvas id="original_image_canvas" height="416" width="416" style="border: 1px solid black"></canvas>
+        <div id="exception_what"></div>
+    </div>
+    <div float="left" id="found_segmentation" style="float: left; width: 50%"></div>
+    <script type="text/javascript" src="segmentation.js"></script>
+</body>
